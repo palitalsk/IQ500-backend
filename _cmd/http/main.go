@@ -20,10 +20,13 @@ func HttpMain(
 	roomRepo := repository.NewRoomRepository(resource.DB)
 	chatRepo := repository.NewChatRepository(resource.DB)
 
+	// AI Service
+	aiService := service.NewAIService(config.AI.BaseURL, config.AI.Timeout)
+
 	// Services (Application)
 	userService := service.NewAuthenticationService(userRepo)
 	roomService := service.NewRoomService(roomRepo)
-	chatService := service.NewChatService(chatRepo, roomRepo)
+	chatService := service.NewChatService(chatRepo, roomRepo, aiService)
 
 	// HTTP Handlers (Adapters)
 	authenticationHandler := httpServer.NewAuthenticationHandler(userService)

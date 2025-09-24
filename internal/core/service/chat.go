@@ -14,17 +14,20 @@ import (
 )
 
 type ChatService struct {
-	chatRepo port.ChatRepository
-	roomRepo port.RoomRepository
+	chatRepo  port.ChatRepository
+	roomRepo  port.RoomRepository
+	aiService port.AIService
 }
 
 func NewChatService(
 	chatRepo port.ChatRepository,
 	roomRepo port.RoomRepository,
+	aiService port.AIService,
 ) *ChatService {
 	return &ChatService{
 		chatRepo,
 		roomRepo,
+		aiService,
 	}
 }
 
@@ -41,19 +44,34 @@ func (s *ChatService) GetChatByRoomID(c *gin.Context, id primitive.ObjectID) ([]
 
 func (s *ChatService) Chat(c *gin.Context, payload domain.PayloadChat) error {
 	if payload.Message == "" && payload.Img == "" {
-		fmt.Println("err message and img is empty")
 		utils.Response(c, http.StatusBadRequest, 400, "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง", "err message and img is empty", nil)
 		return errors.New("err message and img is empty")
 	}
 
 	messageType := ""
-	message := ""
-	if payload.Message != "" {
-		messageType = "text"
-		message = payload.Message
-	} else {
+	var aiResult *domain.AIPredictionResult
+	var image string
+	var message string
+
+	if payload.Img != "" {
 		messageType = "image"
-		message = payload.Img
+		image = payload.Img
+
+		if s.aiService != nil {
+			var err error
+			aiResult, err = s.aiService.PredictSlip(c, payload.Img)
+			if err != nil {
+				fmt.Println("error calling AI service:", err)
+				aiResult = nil
+			}
+		}
+	}
+
+	if payload.Message != "" {
+		if messageType == "" {
+			messageType = "text"
+		}
+		message = payload.Message
 	}
 
 	roomID, _ := primitive.ObjectIDFromHex(payload.RoomID)
@@ -64,26 +82,23 @@ func (s *ChatService) Chat(c *gin.Context, payload domain.PayloadChat) error {
 		Type:        "reply",
 		MessageType: messageType,
 		Message:     message,
+		Image:       image,
+		AIResult:    aiResult,
 		UpdateAt:    time.Now(),
 		CreateAt:    time.Now(),
 	}
 
-	err := s.chatRepo.CreateChat(chat)
-	if err != nil {
-		fmt.Println("error create chat", err)
+	if err := s.chatRepo.CreateChat(chat); err != nil {
 		utils.Response(c, http.StatusInternalServerError, 500, "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง", err.Error(), nil)
 		return err
 	}
 
-	lastMessage := ""
-	if chat.MessageType == "text" {
+	// อัปเดตข้อความล่าสุดเป็นข้อความหรือ placeholder
+	lastMessage := "ข้อความใหม่"
+	if chat.Message != "" {
 		lastMessage = chat.Message
-	} else {
-		lastMessage = "ส่งรูปภาพ"
 	}
-	err = s.roomRepo.UpdateLastMessage(roomID, lastMessage)
-	if err != nil {
-		fmt.Println("error update last message", err)
+	if err := s.roomRepo.UpdateLastMessage(roomID, lastMessage); err != nil {
 		utils.Response(c, http.StatusInternalServerError, 500, "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง", err.Error(), nil)
 		return err
 	}

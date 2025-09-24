@@ -12,6 +12,7 @@ type (
 		// Redis *Redis
 		DB   *DB
 		HTTP *HTTP
+		AI   *AI
 		// RabbitMQ *RabbitMQ
 	}
 	// App contains all the environment variables for the application
@@ -40,6 +41,12 @@ type (
 		URL            string
 		Port           string
 		AllowedOrigins string
+	}
+
+	// AI contains all the environment variables for the AI service
+	AI struct {
+		BaseURL string
+		Timeout int
 	}
 
 	RabbitMQ struct {
@@ -93,6 +100,10 @@ func New() (*Container, error) {
 		AllowedOrigins: os.Getenv("HTTP_ALLOWED_ORIGINS"),
 	}
 
+	ai := &AI{
+		BaseURL: os.Getenv("AI_BASE_URL"),
+	}
+
 	// rabbitMQ := &RabbitMQ{
 	// 	AmqpProtocal: os.Getenv("RABBITMQ_AMQP_PROTOCOL"),
 	// 	AmqpAddr:     os.Getenv("RABBITMQ_AMQP_ADDR"),
@@ -114,6 +125,7 @@ func New() (*Container, error) {
 		// redis,
 		db,
 		http,
+		ai,
 		// rabbitMQ,
 	}, nil
 }
