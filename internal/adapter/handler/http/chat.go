@@ -99,9 +99,15 @@ func (h *ChatHandler) Chat(c *gin.Context) {
 		}
 	}
 
-	if err := h.svc.Chat(c, payload); err != nil {
+	aiResult, err := h.svc.Chat(c, payload)
+	if err != nil {
 		return
 	}
 
-	utils.Response(c, http.StatusOK, 200, "success", "ok", nil)
+	// สร้าง response payload ที่มี AI result
+	responseData := map[string]interface{}{
+		"ai_result": aiResult,
+	}
+
+	utils.Response(c, http.StatusOK, 200, "success", "ok", responseData)
 }

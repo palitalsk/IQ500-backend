@@ -14,5 +14,5 @@ type ChatRepository interface {
 
 type ChatService interface {
 	GetChatByRoomID(c *gin.Context, id primitive.ObjectID) ([]domain.Chat, error)
-	Chat(c *gin.Context, payload domain.PayloadChat) error
+	Chat(c *gin.Context, payload domain.PayloadChat) (*domain.AIPredictionResult, error)
 }

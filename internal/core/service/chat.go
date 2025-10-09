@@ -42,10 +42,10 @@ func (s *ChatService) GetChatByRoomID(c *gin.Context, id primitive.ObjectID) ([]
 	return chat, nil
 }
 
-func (s *ChatService) Chat(c *gin.Context, payload domain.PayloadChat) error {
+func (s *ChatService) Chat(c *gin.Context, payload domain.PayloadChat) (*domain.AIPredictionResult, error) {
 	if payload.Message == "" && payload.Img == "" {
 		utils.Response(c, http.StatusBadRequest, 400, "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง", "err message and img is empty", nil)
-		return errors.New("err message and img is empty")
+		return nil, errors.New("err message and img is empty")
 	}
 
 	messageType := ""
@@ -90,7 +90,7 @@ func (s *ChatService) Chat(c *gin.Context, payload domain.PayloadChat) error {
 
 	if err := s.chatRepo.CreateChat(chat); err != nil {
 		utils.Response(c, http.StatusInternalServerError, 500, "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง", err.Error(), nil)
-		return err
+		return nil, err
 	}
 
 	// อัปเดตข้อความล่าสุดเป็นข้อความหรือ placeholder
@@ -100,8 +100,8 @@ func (s *ChatService) Chat(c *gin.Context, payload domain.PayloadChat) error {
 	}
 	if err := s.roomRepo.UpdateLastMessage(roomID, lastMessage); err != nil {
 		utils.Response(c, http.StatusInternalServerError, 500, "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง", err.Error(), nil)
-		return err
+		return nil, err
 	}
 
-	return nil
+	return aiResult, nil
 }
