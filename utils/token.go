@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"main/internal/core/domain"
+	"main/domain"
 	"os"
 	"time"
 

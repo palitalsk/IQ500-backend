@@ -3,7 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"main/internal/core/domain"
+	"main/domain"
 	"net/http"
 	"os"
 	"strings"

@@ -3,50 +3,82 @@ package http
 import (
 	"fmt"
 	"log"
-	"main/internal/adapter/config"
-	httpServer "main/internal/adapter/handler/http"
+
+	"main/config"
+	"main/handlers"
 	"main/internal/adapter/storage/mongo"
-	"main/internal/adapter/storage/mongo/repository"
-	"main/internal/core/service"
+	"main/repo"
+	"main/router"
+	"main/services"
 )
 
 func HttpMain(
-	config *config.Container,
+	cfg *config.Container,
 	resource *mongo.Resource,
 ) {
-	// === Dependency Injection ===
+	// === Dependency Injection (Hexagonal part) ===
 	// Repositories
-	userRepo := repository.NewUserRepository(resource.DB)
-	roomRepo := repository.NewRoomRepository(resource.DB)
-	chatRepo := repository.NewChatRepository(resource.DB)
+	userRepo := repo.NewUserRepository(resource.DB)
+	roomRepo := repo.NewRoomRepository(resource.DB)
+	chatRepo := repo.NewChatRepository(resource.DB)
 
 	// Services (Application)
-	userService := service.NewAuthenticationService(userRepo)
-	roomService := service.NewRoomService(roomRepo)
-	chatService := service.NewChatService(chatRepo, roomRepo)
+	userService := services.NewAuthenticationService(userRepo)
+	roomService := services.NewRoomService(roomRepo)
+	chatService := services.NewRoomChatService(chatRepo, roomRepo)
 
 	// HTTP Handlers (Adapters)
-	authenticationHandler := httpServer.NewAuthenticationHandler(userService)
-	roomHandler := httpServer.NewRoomHandler(roomService)
-	chatHandler := httpServer.NewChatHandler(chatService)
+	authenticationHandler := handlers.NewAuthHandler(userService)
+	roomHandler := handlers.NewRoomHandler(roomService)
+	chatHandler := handlers.NewRoomChatHandler(chatService)
+
+	// === Business / Document / Chat (demo-api style) ===
+	// Load business-related config (Pinecone, embed-service, MongoDB)
+	bcfg := config.LoadConfig()
+
+	// Separate MongoDB repository for business features (uses same URI / DB via env)
+	mongoRepo, err := repo.NewMongoDBRepository(bcfg.MongoDBURI, bcfg.DatabaseName)
+	if err != nil {
+		log.Fatalf("Failed to connect MongoDB for business features: %v", err)
+	}
+	defer mongoRepo.Close()
+
+	// External repositories
+	embedRepo := repo.NewEmbedRepository(bcfg.EmbedServiceURL)
+	pineconeRepo := repo.NewPineconeRepository(bcfg.PineconeIndexURL, bcfg.PineconeApiKey)
+	businessRepo := repo.NewBusinessRepository(mongoRepo)
+	businessUserRepo := repo.NewBusinessUserRepository(mongoRepo)
+
+	// Services
+	documentService := services.NewDocumentService(embedRepo, pineconeRepo)
+	bizChatService := services.NewChatService(embedRepo, pineconeRepo)
+	businessService := services.NewBusinessService(embedRepo, pineconeRepo, businessRepo, businessUserRepo)
+
+	// Handlers
+	uploadHandler := handlers.NewUploadHandler(documentService)
+	bizChatHandler := handlers.NewChatHandler(bizChatService)
+	businessHandler := handlers.NewBusinessHandler(businessService)
 
 	// router
 	fmt.Println("initializing router")
-	router, err := httpServer.NewRouter(
+	r, err := router.NewRouter(
 		resource.DB,
 		chatHandler,
 		roomHandler,
 		authenticationHandler,
+		uploadHandler,
+		bizChatHandler,
+		businessHandler,
 	)
 	if err != nil {
 		log.Fatalf("Error initializing router", err)
 	}
 
 	// server
-	fmt.Printf("Server listening on port %s\n", config.HTTP.Port)
-	listenAddr := fmt.Sprintf(":%s", config.HTTP.Port)
+	fmt.Printf("Server listening on port %s\n", cfg.HTTP.Port)
+	listenAddr := fmt.Sprintf(":%s", cfg.HTTP.Port)
 
-	err = router.Serve(listenAddr)
+	err = r.Serve(listenAddr)
 	if err != nil {
 		log.Fatalf("listen: %s\n", err)
 	}

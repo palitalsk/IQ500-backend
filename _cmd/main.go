@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
-	"main/internal/adapter/config"
+	"main/config"
 	"main/internal/adapter/storage/mongo"
 
 	httpServer "main/_cmd/http"
@@ -16,18 +16,18 @@ func main() {
 
 	// load environment variables
 	fmt.Println("load environment variables")
-	config, err := config.New()
+	cfg, err := config.New()
 	if err != nil {
 		log.Fatalf("Error loading environment variables", err)
 	}
 
 	// database
 	fmt.Println("connecting to database")
-	resource, err := mongo.New(config.DB)
+	resource, err := mongo.New(cfg.DB)
 	if err != nil {
 		log.Fatalf("Connection database failure, Please check connection", err)
 	}
 	defer resource.Close()
 
-	httpServer.HttpMain(config, resource)
+	httpServer.HttpMain(cfg, resource)
 }
