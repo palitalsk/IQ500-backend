@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthHandler จัดการ endpoint ด้าน authentication (login / register / reset-password)
 type AuthHandler struct {
 	svc port.AuthenticationService
 }

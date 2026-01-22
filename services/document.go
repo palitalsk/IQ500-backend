@@ -2,11 +2,10 @@ package services
 
 import (
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"main/helpers"
 	"main/models"
@@ -25,42 +24,21 @@ func NewDocumentService(embedRepo *repo.EmbedRepository, pineconeRepo *repo.Pine
 	}
 }
 
-// ProcessUploadedFile >> อัปโหลดไฟล์ และเก็บลง pinecone
-func (s *DocumentService) ProcessUploadedFile(file io.Reader, filename, businessCode string) (*models.DocumentUploadResponse, error) {
-	// Save to temp file
-	tmp, err := os.CreateTemp("", "upload-*"+filepath.Ext(filename))
-	if err != nil {
-		return nil, fmt.Errorf("cannot create temp file: %w", err)
-	}
-	defer os.Remove(tmp.Name())
-
-	_, err = io.Copy(tmp, file)
-	if err != nil {
-		return nil, fmt.Errorf("cannot save uploaded file: %w", err)
-	}
-	tmp.Close()
-
-	// Extract text
+// ProcessDocumentData >> รับ title และ content แล้วเก็บลง pinecone
+func (s *DocumentService) ProcessDocumentData(title, content, businessCode string) (*models.DocumentUploadResponse, error) {
+	// รวม title และ content
 	var text string
-	ext := strings.ToLower(filepath.Ext(filename))
-	if ext == ".pdf" {
-		text, err = helpers.ReadPdfText(tmp.Name())
-		if err != nil {
-			return nil, fmt.Errorf("cannot read PDF: %w", err)
-		}
-	} else {
-		// .txt or plain text
-		b, err := os.ReadFile(tmp.Name())
-		if err != nil {
-			return nil, fmt.Errorf("cannot read file: %w", err)
-		}
-		text = string(b)
+	if title != "" {
+		text += fmt.Sprintf("ชื่อเรื่อง: %s\n\n", title)
+	}
+	if content != "" {
+		text += content
 	}
 
 	// Clean text
 	text = helpers.CleanText(text)
 	if strings.TrimSpace(text) == "" {
-		return nil, fmt.Errorf("no text extracted from file")
+		return nil, fmt.Errorf("title and content cannot be empty")
 	}
 
 	// Split into chunks
@@ -74,13 +52,19 @@ func (s *DocumentService) ProcessUploadedFile(file io.Reader, filename, business
 
 	// สร้าง vectors
 	var vectors []models.PineconeVector
+
 	for i, v := range embs {
-		id := fmt.Sprintf("%s-%s-%d", businessCode, filename, i)
+		// ใช้ ObjectID แทนชื่อเพื่อให้เป็น unique
+		id := primitive.NewObjectID().Hex()
 		metadata := map[string]interface{}{
 			"text":          chunks[i],
-			"source":        filename,
+			"source":        title, // เก็บ title เดิมใน metadata
 			"business_code": businessCode,
 			"chunk_index":   i,
+		}
+		// เพิ่ม title ใน metadata
+		if title != "" {
+			metadata["title"] = title
 		}
 		vec := models.PineconeVector{
 			ID:       id,
@@ -100,7 +84,7 @@ func (s *DocumentService) ProcessUploadedFile(file io.Reader, filename, business
 
 	return &models.DocumentUploadResponse{
 		ID:        documentID,
-		Filename:  filename,
+		Title:     title,
 		Chunks:    len(chunks),
 		Status:    "completed",
 		CreatedAt: time.Now(),

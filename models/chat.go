@@ -18,9 +18,7 @@ type ChatRequest struct {
 }
 
 type ChatResponse struct {
-	Query     string `json:"query"`
-	Namespace string `json:"namespace"`
-	Results   string `json:"results"`
+	Results string `json:"results"`
 }
 
 type UploadResponse struct {

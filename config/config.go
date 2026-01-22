@@ -13,9 +13,9 @@ type Config struct {
 	EmbedServiceURL  string
 	MongoDBURI       string
 	DatabaseName     string
+	GeminiApiKey     string
 }
 
-// loads configuration from environment variables
 func LoadConfig() *Config {
 	err := godotenv.Load()
 	if err != nil {
@@ -27,7 +27,8 @@ func LoadConfig() *Config {
 		PineconeIndexURL: os.Getenv("PINECONE_INDEX_URL"),
 		EmbedServiceURL:  os.Getenv("EMBED_SERVICE_URL"),
 		MongoDBURI:       os.Getenv("MONGODB_URI"),
-		DatabaseName:     os.Getenv("DATABASE_NAME"),
+		DatabaseName:     os.Getenv("DB_NAME"),
+		GeminiApiKey:     os.Getenv("GEMINI_API_KEY"),
 	}
 
 	return config

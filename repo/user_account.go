@@ -129,7 +129,3 @@ func (r *UserRepository) UpdateToken(id primitive.ObjectID, token string) error 
 
 	return nil
 }
-
-
-
-

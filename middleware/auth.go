@@ -21,24 +21,3 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
-
-func BusinessAccessMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		_ = c.GetString("user_id")
-		businessCode := c.Param("business_code")
-
-		if businessCode == "" {
-			// query params
-			businessCode = c.Query("business_code")
-		}
-
-		if businessCode == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Business Code required"})
-			c.Abort()
-			return
-		}
-
-		c.Set("business_code", businessCode)
-		c.Next()
-	}
-}

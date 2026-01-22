@@ -13,7 +13,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// AuthenticationService ให้บริการเกี่ยวกับ auth เดิมของ IQ500
 type AuthenticationService struct {
 	userRepo port.UserRepository
 }

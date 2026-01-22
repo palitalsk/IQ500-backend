@@ -40,6 +40,7 @@ type (
 		URL            string
 		Port           string
 		AllowedOrigins string
+		SlipAPIURL     string
 	}
 
 	RabbitMQ struct {
@@ -86,6 +87,7 @@ func New() (*Container, error) {
 		URL:            os.Getenv("HTTP_URL"),
 		Port:           os.Getenv("HTTP_PORT"),
 		AllowedOrigins: os.Getenv("HTTP_ALLOWED_ORIGINS"),
+		SlipAPIURL:     os.Getenv("SLIP_API_URL"),
 	}
 
 	return &Container{

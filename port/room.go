@@ -19,7 +19,3 @@ type RoomService interface {
 	CreateRoom(c *gin.Context, payload domain.PayloadRoom) (primitive.ObjectID, error)
 	DeleteRoomByID(c *gin.Context, id primitive.ObjectID) error
 }
-
-
-
-

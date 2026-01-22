@@ -12,7 +12,3 @@ type UserRepository interface {
 	UpdatePasswordUser(id primitive.ObjectID, password string) error
 	UpdateToken(id primitive.ObjectID, token string) error
 }
-
-
-
-

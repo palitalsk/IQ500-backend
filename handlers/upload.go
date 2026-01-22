@@ -18,23 +18,19 @@ func NewUploadHandler(documentService *services.DocumentService) *UploadHandler 
 	}
 }
 
-// HandleUpload
 func (h *UploadHandler) HandleUpload(c *gin.Context) {
-	businessCode := c.GetString("business_code")
-	if businessCode == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Business Code required"})
+	var req struct {
+		BusinessCode string `json:"business_code" binding:"required"`
+		Title        string `json:"title" binding:"required"`
+		Content      string `json:"content" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "business_code, title and content are required"})
 		return
 	}
 
-	file, header, err := c.Request.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file required"})
-		return
-	}
-	defer file.Close()
-
-	// Process uploaded file
-	response, err := h.documentService.ProcessUploadedFile(file, header.Filename, businessCode) // extract text, embed, upsert ไป pinecone
+	response, err := h.documentService.ProcessDocumentData(req.Title, req.Content, req.BusinessCode)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

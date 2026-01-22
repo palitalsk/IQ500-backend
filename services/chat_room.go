@@ -40,11 +40,11 @@ func (s *RoomChatService) GetChatByRoomID(c *gin.Context, id primitive.ObjectID)
 	return chat, nil
 }
 
-func (s *RoomChatService) Chat(c *gin.Context, payload domain.PayloadChat) error {
+func (s *RoomChatService) Chat(c *gin.Context, payload domain.PayloadChat) (*domain.Chat, error) {
 	if payload.Message == "" && payload.Img == "" {
 		fmt.Println("err message and img is empty")
 		utils.Response(c, http.StatusBadRequest, 400, "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง", "err message and img is empty", nil)
-		return errors.New("err message and img is empty")
+		return nil, errors.New("err message and img is empty")
 	}
 
 	messageType := ""
@@ -65,15 +65,30 @@ func (s *RoomChatService) Chat(c *gin.Context, payload domain.PayloadChat) error
 		Type:        "reply",
 		MessageType: messageType,
 		Message:     message,
+		AiResult:    payload.AiResult, // เก็บ ai_result จาก OCR
 		UpdateAt:    time.Now(),
 		CreateAt:    time.Now(),
+	}
+
+	// Log ai_result สำหรับ debugging
+	if chat.AiResult != nil {
+		fmt.Printf("Saving chat with ai_result: is_slip=%v, ocr_result_fields=%d\n",
+			chat.AiResult["is_slip"],
+			func() int {
+				if ocr, ok := chat.AiResult["ocr_result"].(map[string]interface{}); ok {
+					return len(ocr)
+				}
+				return 0
+			}())
+	} else {
+		fmt.Println("Chat has no ai_result")
 	}
 
 	err := s.chatRepo.CreateChat(chat)
 	if err != nil {
 		fmt.Println("error create chat", err)
 		utils.Response(c, http.StatusInternalServerError, 500, "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง", err.Error(), nil)
-		return err
+		return nil, err
 	}
 
 	lastMessage := ""
@@ -86,10 +101,8 @@ func (s *RoomChatService) Chat(c *gin.Context, payload domain.PayloadChat) error
 	if err != nil {
 		fmt.Println("error update last message", err)
 		utils.Response(c, http.StatusInternalServerError, 500, "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง", err.Error(), nil)
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &chat, nil
 }
-
-

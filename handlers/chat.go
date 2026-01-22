@@ -19,21 +19,19 @@ func NewChatHandler(chatService *services.ChatService) *ChatHandler {
 	}
 }
 
-// HandleChat
 func (h *ChatHandler) HandleChat(c *gin.Context) {
-	businessCode := c.GetString("business_code") // ดึง business_code มาเช็ค
-	if businessCode == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Business Code required"})
-		return
-	}
-
 	var req models.ChatRequest
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
 		return
 	}
 
-	// Process chat request >> ส่งข้อความไปหา AI
+	businessCode := req.Namespace
+	if businessCode == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "business_code (namespace) is required in request body"})
+		return
+	}
+
 	response, err := h.chatService.ProcessChat(businessCode, &req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -42,3 +40,4 @@ func (h *ChatHandler) HandleChat(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+

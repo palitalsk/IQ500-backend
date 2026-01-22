@@ -67,7 +67,3 @@ func (s *RoomService) DeleteRoomByID(c *gin.Context, id primitive.ObjectID) erro
 
 	return nil
 }
-
-
-
-

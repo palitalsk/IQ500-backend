@@ -16,10 +16,8 @@ type Document struct {
 
 type DocumentUploadResponse struct {
 	ID        string    `json:"id"`
-	Filename  string    `json:"filename"`
+	Title     string    `json:"title"`
 	Chunks    int       `json:"chunks"`
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 }
-
-
